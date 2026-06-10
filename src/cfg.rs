@@ -262,14 +262,14 @@ impl Cfg {
         let mut coordinates = HashMap::with_capacity(self.graph.node_count());
         for node in self.graph.node_indices() {
             let id = BlockId::from(node);
-            let point = Point::from_triskel(layout.coords(triskel_nodes[&id])?)?;
-            coordinates.insert(id, point);
+            let top_left = Point::from_triskel(layout.coords(triskel_nodes[&id])?)?;
+            coordinates.insert(id, top_left);
             let block = self.block(id)?.clone();
             blocks.push(LayoutBlock {
                 id,
                 label: block.label,
                 size: block.size,
-                center: point,
+                top_left,
                 rank: 0,
                 column: 0,
             });
@@ -285,13 +285,15 @@ impl Cfg {
                 .into_iter()
                 .map(Point::from_triskel)
                 .collect::<Result<Vec<_>>>()?;
+            let source = waypoints.first().copied().unwrap_or(coordinates[&from]);
+            let target = waypoints.last().copied().unwrap_or(coordinates[&to]);
             edges.push(LayoutEdge {
                 id,
                 from,
                 to,
                 kind: edge.weight().kind,
-                source: coordinates[&from],
-                target: coordinates[&to],
+                source,
+                target,
                 waypoints,
             });
         }

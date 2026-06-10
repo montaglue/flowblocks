@@ -8,6 +8,8 @@ The crate owns a small CFG model and uses:
 
 - [`triskel`](https://crates.io/crates/triskel) for C++-backed CFG layout.
 - [`petgraph`](https://crates.io/crates/petgraph) for internal graph storage.
+- [`egui`](https://crates.io/crates/egui) for feature-gated immediate-mode CFG
+  display widgets.
 
 ## Requirements
 
@@ -81,6 +83,49 @@ metadata.
 Some VEIL definitions leave implementation details open. This crate documents
 those choices in code by using inferred layout ranks, routed edge polylines, and
 median-based summaries for robust first-pass metrics.
+
+## egui Display
+
+With the `ui` feature enabled, `flowblocks::ui` exposes a reusable egui widget
+for displaying any `CfgLayout`:
+
+```rust
+# use flowblocks::{Result, cfg_viewer, examples};
+#
+# fn render(ui: &mut egui::Ui) -> Result<()> {
+let cfg = examples::branch_with_join()?;
+let layout = cfg.layout()?;
+
+cfg_viewer(&layout).show(ui);
+# Ok(())
+# }
+```
+
+The viewer draws routed edges, arrowheads, block labels, and entry/exit emphasis.
+Use `CfgViewer::with_options` to customize colors, strokes, padding, and default
+block sizing.
+
+The crate also includes a native viewer binary:
+
+```sh
+cargo run --features viewer --bin flowblocks-viewer
+```
+
+The binary lets you switch between the built-in examples and inspect their CFG
+shape, rendered layout, and VEIL metrics.
+
+## Built-in Examples
+
+`flowblocks::examples` contains reusable CFG builders:
+
+- `branch_with_join()`
+- `counted_loop()`
+- `nested_conditionals()`
+- `switch_dispatch()`
+- `retry_with_cleanup()`
+- `single_block_loop()`
+
+Use `examples::all()` to iterate over all named examples.
 
 ## Development
 

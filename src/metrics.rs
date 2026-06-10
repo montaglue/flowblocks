@@ -310,7 +310,7 @@ fn ideal_edge_length(
 ) -> f64 {
     let mut rank_y = HashMap::<usize, Vec<f64>>::new();
     for block in &layout.blocks {
-        rank_y.entry(block.rank).or_default().push(block.center.y);
+        rank_y.entry(block.rank).or_default().push(block.center().y);
     }
 
     let mut rank_centers: Vec<_> = rank_y
@@ -333,8 +333,8 @@ fn ideal_edge_length(
         .iter()
         .map(|edge| {
             block_map[&edge.from]
-                .center
-                .distance(block_map[&edge.to].center)
+                .center()
+                .distance(block_map[&edge.to].center())
         })
         .filter(|length| *length > EPSILON)
         .collect();
@@ -350,7 +350,7 @@ fn bounding_box_area(layout: &CfgLayout) -> f64 {
     let points: Vec<_> = layout
         .blocks
         .iter()
-        .map(|block| block.center)
+        .map(|block| block.center())
         .chain(layout.edges.iter().flat_map(|edge| edge.polyline()))
         .collect();
 
@@ -514,9 +514,30 @@ mod tests {
                 block(3, 100.0, 100.0),
             ],
             vec![
-                edge(0, 0, 3, (0.0, 0.0), (100.0, 100.0), vec![]),
-                edge(1, 2, 1, (100.0, 50.0), (0.0, 50.0), vec![(50.0, 75.0)]),
-                edge(2, 0, 2, (0.0, 0.0), (100.0, 50.0), vec![(50.0, 0.0)]),
+                edge(
+                    0,
+                    0,
+                    3,
+                    (0.0, 0.0),
+                    (100.0, 100.0),
+                    vec![(0.0, 0.0), (100.0, 100.0)],
+                ),
+                edge(
+                    1,
+                    2,
+                    1,
+                    (100.0, 50.0),
+                    (0.0, 50.0),
+                    vec![(100.0, 50.0), (50.0, 75.0), (0.0, 50.0)],
+                ),
+                edge(
+                    2,
+                    0,
+                    2,
+                    (0.0, 0.0),
+                    (100.0, 50.0),
+                    vec![(0.0, 0.0), (50.0, 0.0), (100.0, 50.0)],
+                ),
             ],
             BlockId::from_raw(0),
             vec![BlockId::from_raw(3)],
@@ -532,7 +553,7 @@ mod tests {
                 width: 10.0,
                 height: 10.0,
             }),
-            center: Point { x, y },
+            top_left: Point { x, y },
             rank: 0,
             column: 0,
         }

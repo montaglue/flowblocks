@@ -37,9 +37,22 @@ pub struct LayoutBlock {
     pub id: BlockId,
     pub label: String,
     pub size: Option<BlockSize>,
-    pub center: Point,
+    pub top_left: Point,
     pub rank: usize,
     pub column: usize,
+}
+
+impl LayoutBlock {
+    pub fn center(&self) -> Point {
+        let size = self.size.unwrap_or(BlockSize {
+            width: 1.0,
+            height: 1.0,
+        });
+        Point {
+            x: self.top_left.x + size.width / 2.0,
+            y: self.top_left.y + size.height / 2.0,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -55,12 +68,14 @@ pub struct LayoutEdge {
 
 impl LayoutEdge {
     pub fn polyline(&self) -> Vec<Point> {
-        let mut points = Vec::with_capacity(self.waypoints.len() + 2);
-        push_distinct(&mut points, self.source);
+        let mut points = Vec::with_capacity(self.waypoints.len().max(2));
         for point in &self.waypoints {
             push_distinct(&mut points, *point);
         }
-        push_distinct(&mut points, self.target);
+        if points.is_empty() {
+            push_distinct(&mut points, self.source);
+            push_distinct(&mut points, self.target);
+        }
         points
     }
 
@@ -154,12 +169,12 @@ fn push_distinct(points: &mut Vec<Point>, point: Point) {
 }
 
 fn infer_grid_positions(blocks: &mut [LayoutBlock]) {
-    let ys = sorted_axis_values(blocks.iter().map(|block| block.center.y));
-    let xs = sorted_axis_values(blocks.iter().map(|block| block.center.x));
+    let ys = sorted_axis_values(blocks.iter().map(|block| block.top_left.y));
+    let xs = sorted_axis_values(blocks.iter().map(|block| block.top_left.x));
 
     for block in blocks {
-        block.rank = nearest_cluster(block.center.y, &ys);
-        block.column = nearest_cluster(block.center.x, &xs);
+        block.rank = nearest_cluster(block.top_left.y, &ys);
+        block.column = nearest_cluster(block.top_left.x, &xs);
     }
 }
 

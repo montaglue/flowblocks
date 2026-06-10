@@ -2,7 +2,25 @@
 name = "flowblocks"
 version = "0.1.0"
 edition = "2024"
+description = "Control-flow graph layout and VEIL metrics for Rust"
+readme = "README.md"
+repository = "https://github.com/montaglue/flowblocks"
+license = "MPL-2.0"
+keywords = ["cfg", "graph", "layout", "metrics", "egui"]
+categories = ["algorithms", "development-tools", "visualization"]
+
+[features]
+default = []
+ui = ["dep:egui"]
+viewer = ["ui", "dep:eframe"]
+
+[[bin]]
+name = "flowblocks-viewer"
+path = "src/bin/flowblocks-viewer.rs"
+required-features = ["viewer"]
 
 [dependencies]
+eframe = { version = "0.34.3", optional = true }
+egui = { version = "0.34.3", optional = true }
 petgraph = "0.8.3"
 triskel = "0.1.0"
