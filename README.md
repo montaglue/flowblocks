@@ -27,10 +27,10 @@ use flowblocks::{Cfg, EdgeKind, Result};
 fn main() -> Result<()> {
     let mut cfg = Cfg::new();
 
-    let entry = cfg.add_block("entry");
-    let branch = cfg.add_block("branch");
-    let true_exit = cfg.add_block("true_exit");
-    let false_exit = cfg.add_block_with_size("false_exit", 120.0, 48.0)?;
+    let entry = cfg.add_node(96.0, 44.0)?;
+    let branch = cfg.add_node(112.0, 48.0)?;
+    let true_exit = cfg.add_node(96.0, 44.0)?;
+    let false_exit = cfg.add_node(120.0, 48.0)?;
 
     cfg.add_edge(entry, branch, EdgeKind::Default)?;
     cfg.add_edge(branch, true_exit, EdgeKind::True)?;
@@ -52,17 +52,15 @@ fn main() -> Result<()> {
 
 The main entry point is `Cfg`:
 
-- `add_block(label)` adds a labeled basic block.
-- `add_block_with_size(label, width, height)` adds a block with explicit layout
-  dimensions.
+- `add_node(width, height)` adds a basic block with explicit layout dimensions.
 - `add_edge(from, to, kind)` adds a directed control-flow edge.
 - `validate()` requires exactly one entry block and at least one exit block.
 - `layout()` validates the CFG, runs Triskel, and returns `CfgLayout`.
 
-`CfgLayout` stores graph dimensions, block positions, edge polylines, inferred
-ranks/columns, entry, and exits. Ranks and columns are inferred from Triskel
-coordinates because Triskel exposes coordinates and waypoints, not explicit rank
-metadata.
+`CfgLayout` stores graph dimensions, block sizes and positions, edge polylines,
+inferred ranks/columns, entry, and exits. Ranks and columns are inferred from
+Triskel coordinates because Triskel exposes coordinates and waypoints, not
+explicit rank metadata.
 
 ## VEIL Metrics
 
@@ -101,9 +99,8 @@ cfg_viewer(&layout).show(ui);
 # }
 ```
 
-The viewer draws routed edges, arrowheads, block labels, and entry/exit emphasis.
-Use `CfgViewer::with_options` to customize colors, strokes, padding, and default
-block sizing.
+The viewer draws routed edges, arrowheads, blocks, and entry/exit emphasis. Use
+`CfgViewer::with_options` to customize colors, strokes, and padding.
 
 The crate also includes a native viewer binary:
 

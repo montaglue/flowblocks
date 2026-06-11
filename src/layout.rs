@@ -4,16 +4,16 @@ use crate::metrics::VeilMetrics;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-const CLUSTER_EPSILON: f64 = 1.0e-3;
+const CLUSTER_EPSILON: f32 = 1.0e-3;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Point {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
 }
 
 impl Point {
-    pub fn new(x: f64, y: f64) -> Result<Self> {
+    pub fn new(x: f32, y: f32) -> Result<Self> {
         if x.is_finite() && y.is_finite() {
             Ok(Self { x, y })
         } else {
@@ -22,12 +22,12 @@ impl Point {
     }
 
     pub(crate) fn from_triskel(point: triskel::Point) -> Result<Self> {
-        Self::new(point.x as f64, point.y as f64)
+        Self::new(point.x, point.y)
     }
 
     pub(crate) fn distance(self, other: Self) -> f64 {
-        let dx = self.x - other.x;
-        let dy = self.y - other.y;
+        let dx = f64::from(self.x - other.x);
+        let dy = f64::from(self.y - other.y);
         dx.hypot(dy)
     }
 }
@@ -35,8 +35,7 @@ impl Point {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LayoutBlock {
     pub id: BlockId,
-    pub label: String,
-    pub size: Option<BlockSize>,
+    pub size: BlockSize,
     pub top_left: Point,
     pub rank: usize,
     pub column: usize,
@@ -44,13 +43,9 @@ pub struct LayoutBlock {
 
 impl LayoutBlock {
     pub fn center(&self) -> Point {
-        let size = self.size.unwrap_or(BlockSize {
-            width: 1.0,
-            height: 1.0,
-        });
         Point {
-            x: self.top_left.x + size.width / 2.0,
-            y: self.top_left.y + size.height / 2.0,
+            x: self.top_left.x + self.size.width / 2.0,
+            y: self.top_left.y + self.size.height / 2.0,
         }
     }
 }
@@ -86,8 +81,8 @@ impl LayoutEdge {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CfgLayout {
-    pub width: f64,
-    pub height: f64,
+    pub width: f32,
+    pub height: f32,
     pub blocks: Vec<LayoutBlock>,
     pub edges: Vec<LayoutEdge>,
     pub entry: BlockId,
@@ -96,8 +91,8 @@ pub struct CfgLayout {
 
 impl CfgLayout {
     pub fn new(
-        width: f64,
-        height: f64,
+        width: f32,
+        height: f32,
         mut blocks: Vec<LayoutBlock>,
         edges: Vec<LayoutEdge>,
         entry: BlockId,
@@ -162,7 +157,7 @@ pub(crate) fn polyline_length(points: &[Point]) -> f64 {
 fn push_distinct(points: &mut Vec<Point>, point: Point) {
     if points
         .last()
-        .is_none_or(|last| last.distance(point) > CLUSTER_EPSILON)
+        .is_none_or(|last| last.distance(point) > f64::from(CLUSTER_EPSILON))
     {
         points.push(point);
     }
@@ -178,7 +173,7 @@ fn infer_grid_positions(blocks: &mut [LayoutBlock]) {
     }
 }
 
-fn sorted_axis_values(values: impl Iterator<Item = f64>) -> Vec<f64> {
+fn sorted_axis_values(values: impl Iterator<Item = f32>) -> Vec<f32> {
     let mut clusters = Vec::new();
     let mut values: Vec<_> = values.filter(|value| value.is_finite()).collect();
     values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
@@ -186,7 +181,7 @@ fn sorted_axis_values(values: impl Iterator<Item = f64>) -> Vec<f64> {
     for value in values {
         if clusters
             .last()
-            .is_none_or(|last: &f64| (value - *last).abs() > CLUSTER_EPSILON)
+            .is_none_or(|last: &f32| (value - *last).abs() > CLUSTER_EPSILON)
         {
             clusters.push(value);
         }
@@ -195,7 +190,7 @@ fn sorted_axis_values(values: impl Iterator<Item = f64>) -> Vec<f64> {
     clusters
 }
 
-fn nearest_cluster(value: f64, clusters: &[f64]) -> usize {
+fn nearest_cluster(value: f32, clusters: &[f32]) -> usize {
     clusters
         .iter()
         .enumerate()

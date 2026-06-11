@@ -7,7 +7,7 @@ pub type Result<T> = std::result::Result<T, FlowblocksError>;
 pub enum FlowblocksError {
     InvalidBlockId(BlockId),
     InvalidEdgeId(ControlEdgeId),
-    InvalidBlockSize { width: f64, height: f64 },
+    InvalidBlockSize { width: f32, height: f32 },
     MissingEntry,
     MultipleEntries(Vec<BlockId>),
     MissingExit,

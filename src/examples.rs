@@ -2,12 +2,12 @@ use crate::{Cfg, EdgeKind, Result};
 
 pub fn branch_with_join() -> Result<Cfg> {
     let mut cfg = Cfg::new();
-    let entry = cfg.add_block_with_size("entry", 96.0, 44.0)?;
-    let check = cfg.add_block_with_size("check permissions", 148.0, 52.0)?;
-    let fast = cfg.add_block_with_size("cached path", 124.0, 48.0)?;
-    let slow = cfg.add_block_with_size("load from store", 140.0, 48.0)?;
-    let merge = cfg.add_block_with_size("merge result", 124.0, 48.0)?;
-    let exit = cfg.add_block_with_size("return", 96.0, 44.0)?;
+    let entry = cfg.add_node(96.0, 44.0)?;
+    let check = cfg.add_node(148.0, 52.0)?;
+    let fast = cfg.add_node(124.0, 48.0)?;
+    let slow = cfg.add_node(140.0, 48.0)?;
+    let merge = cfg.add_node(124.0, 48.0)?;
+    let exit = cfg.add_node(96.0, 44.0)?;
 
     cfg.add_edge(entry, check, EdgeKind::Default)?;
     cfg.add_edge(check, fast, EdgeKind::True)?;
@@ -21,12 +21,12 @@ pub fn branch_with_join() -> Result<Cfg> {
 
 pub fn counted_loop() -> Result<Cfg> {
     let mut cfg = Cfg::new();
-    let entry = cfg.add_block_with_size("entry", 96.0, 44.0)?;
-    let init = cfg.add_block_with_size("i = 0", 92.0, 44.0)?;
-    let header = cfg.add_block_with_size("i < len?", 112.0, 48.0)?;
-    let body = cfg.add_block_with_size("accumulate", 128.0, 48.0)?;
-    let latch = cfg.add_block_with_size("i += 1", 96.0, 44.0)?;
-    let exit = cfg.add_block_with_size("return acc", 116.0, 44.0)?;
+    let entry = cfg.add_node(96.0, 44.0)?;
+    let init = cfg.add_node(92.0, 44.0)?;
+    let header = cfg.add_node(112.0, 48.0)?;
+    let body = cfg.add_node(128.0, 48.0)?;
+    let latch = cfg.add_node(96.0, 44.0)?;
+    let exit = cfg.add_node(116.0, 44.0)?;
 
     cfg.add_edge(entry, init, EdgeKind::Default)?;
     cfg.add_edge(init, header, EdgeKind::Default)?;
@@ -40,15 +40,15 @@ pub fn counted_loop() -> Result<Cfg> {
 
 pub fn nested_conditionals() -> Result<Cfg> {
     let mut cfg = Cfg::new();
-    let entry = cfg.add_block_with_size("entry", 96.0, 44.0)?;
-    let parse = cfg.add_block_with_size("parse input", 120.0, 48.0)?;
-    let valid = cfg.add_block_with_size("valid?", 96.0, 48.0)?;
-    let privileged = cfg.add_block_with_size("privileged?", 128.0, 48.0)?;
-    let admin = cfg.add_block_with_size("admin flow", 112.0, 48.0)?;
-    let user = cfg.add_block_with_size("user flow", 108.0, 48.0)?;
-    let reject = cfg.add_block_with_size("reject", 96.0, 44.0)?;
-    let audit = cfg.add_block_with_size("audit", 96.0, 44.0)?;
-    let exit = cfg.add_block_with_size("finish", 96.0, 44.0)?;
+    let entry = cfg.add_node(96.0, 44.0)?;
+    let parse = cfg.add_node(120.0, 48.0)?;
+    let valid = cfg.add_node(96.0, 48.0)?;
+    let privileged = cfg.add_node(128.0, 48.0)?;
+    let admin = cfg.add_node(112.0, 48.0)?;
+    let user = cfg.add_node(108.0, 48.0)?;
+    let reject = cfg.add_node(96.0, 44.0)?;
+    let audit = cfg.add_node(96.0, 44.0)?;
+    let exit = cfg.add_node(96.0, 44.0)?;
 
     cfg.add_edge(entry, parse, EdgeKind::Default)?;
     cfg.add_edge(parse, valid, EdgeKind::Default)?;
@@ -66,14 +66,14 @@ pub fn nested_conditionals() -> Result<Cfg> {
 
 pub fn switch_dispatch() -> Result<Cfg> {
     let mut cfg = Cfg::new();
-    let entry = cfg.add_block_with_size("entry", 96.0, 44.0)?;
-    let decode = cfg.add_block_with_size("decode opcode", 140.0, 48.0)?;
-    let add = cfg.add_block_with_size("add", 88.0, 44.0)?;
-    let sub = cfg.add_block_with_size("sub", 88.0, 44.0)?;
-    let mul = cfg.add_block_with_size("mul", 88.0, 44.0)?;
-    let fallback = cfg.add_block_with_size("trap", 88.0, 44.0)?;
-    let normalize = cfg.add_block_with_size("normalize flags", 148.0, 48.0)?;
-    let exit = cfg.add_block_with_size("return", 96.0, 44.0)?;
+    let entry = cfg.add_node(96.0, 44.0)?;
+    let decode = cfg.add_node(140.0, 48.0)?;
+    let add = cfg.add_node(88.0, 44.0)?;
+    let sub = cfg.add_node(88.0, 44.0)?;
+    let mul = cfg.add_node(88.0, 44.0)?;
+    let fallback = cfg.add_node(88.0, 44.0)?;
+    let normalize = cfg.add_node(148.0, 48.0)?;
+    let exit = cfg.add_node(96.0, 44.0)?;
 
     cfg.add_edge(entry, decode, EdgeKind::Default)?;
     cfg.add_edge(decode, add, EdgeKind::Default)?;
@@ -91,15 +91,15 @@ pub fn switch_dispatch() -> Result<Cfg> {
 
 pub fn retry_with_cleanup() -> Result<Cfg> {
     let mut cfg = Cfg::new();
-    let entry = cfg.add_block_with_size("entry", 96.0, 44.0)?;
-    let acquire = cfg.add_block_with_size("acquire", 104.0, 44.0)?;
-    let call = cfg.add_block_with_size("call service", 124.0, 48.0)?;
-    let ok = cfg.add_block_with_size("ok?", 88.0, 44.0)?;
-    let retryable = cfg.add_block_with_size("retryable?", 124.0, 48.0)?;
-    let backoff = cfg.add_block_with_size("backoff", 104.0, 44.0)?;
-    let cleanup = cfg.add_block_with_size("cleanup", 104.0, 44.0)?;
-    let error = cfg.add_block_with_size("error", 88.0, 44.0)?;
-    let exit = cfg.add_block_with_size("success", 100.0, 44.0)?;
+    let entry = cfg.add_node(96.0, 44.0)?;
+    let acquire = cfg.add_node(104.0, 44.0)?;
+    let call = cfg.add_node(124.0, 48.0)?;
+    let ok = cfg.add_node(88.0, 44.0)?;
+    let retryable = cfg.add_node(124.0, 48.0)?;
+    let backoff = cfg.add_node(104.0, 44.0)?;
+    let cleanup = cfg.add_node(104.0, 44.0)?;
+    let error = cfg.add_node(88.0, 44.0)?;
+    let exit = cfg.add_node(100.0, 44.0)?;
 
     cfg.add_edge(entry, acquire, EdgeKind::Default)?;
     cfg.add_edge(acquire, call, EdgeKind::Default)?;
@@ -116,9 +116,9 @@ pub fn retry_with_cleanup() -> Result<Cfg> {
 
 pub fn single_block_loop() -> Result<Cfg> {
     let mut cfg = Cfg::new();
-    let entry = cfg.add_block_with_size("entry", 96.0, 44.0)?;
-    let loop_body = cfg.add_block_with_size("poll until ready", 148.0, 52.0)?;
-    let exit = cfg.add_block_with_size("done", 96.0, 44.0)?;
+    let entry = cfg.add_node(96.0, 44.0)?;
+    let loop_body = cfg.add_node(148.0, 52.0)?;
+    let exit = cfg.add_node(96.0, 44.0)?;
 
     cfg.add_edge(entry, loop_body, EdgeKind::Default)?;
     cfg.add_edge(loop_body, loop_body, EdgeKind::True)?;

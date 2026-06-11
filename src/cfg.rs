@@ -53,18 +53,17 @@ impl From<EdgeIndex> for ControlEdgeId {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Block {
-    pub label: String,
-    pub size: Option<BlockSize>,
+    pub size: BlockSize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BlockSize {
-    pub width: f64,
-    pub height: f64,
+    pub width: f32,
+    pub height: f32,
 }
 
 impl BlockSize {
-    pub fn new(width: f64, height: f64) -> Result<Self> {
+    pub fn new(width: f32, height: f32) -> Result<Self> {
         if width.is_finite() && height.is_finite() && width > 0.0 && height > 0.0 {
             Ok(Self { width, height })
         } else {
@@ -112,29 +111,13 @@ impl Cfg {
         Self::default()
     }
 
-    pub fn add_block(&mut self, label: impl Into<String>) -> BlockId {
-        self.graph
-            .add_node(Block {
-                label: label.into(),
-                size: None,
-            })
-            .into()
+    pub fn add_node(&mut self, width: f32, height: f32) -> Result<BlockId> {
+        self.add_node_with_size(width, height)
     }
 
-    pub fn add_block_with_size(
-        &mut self,
-        label: impl Into<String>,
-        width: f64,
-        height: f64,
-    ) -> Result<BlockId> {
+    pub fn add_node_with_size(&mut self, width: f32, height: f32) -> Result<BlockId> {
         let size = BlockSize::new(width, height)?;
-        Ok(self
-            .graph
-            .add_node(Block {
-                label: label.into(),
-                size: Some(size),
-            })
-            .into())
+        Ok(self.graph.add_node(Block { size }).into())
     }
 
     pub fn add_edge(
@@ -231,13 +214,8 @@ impl Cfg {
         for node in self.graph.node_indices() {
             let id = BlockId::from(node);
             let block = self.block(id)?;
-            let triskel_id = if let Some(size) = block.size {
-                builder.make_node_with_size(size.height as f32, size.width as f32)?
-            } else if block.label.is_empty() {
-                builder.make_node()?
-            } else {
-                builder.make_node_with_label(&block.label)?
-            };
+            let size = block.size;
+            let triskel_id = builder.make_node_with_size(size.height, size.width)?;
             triskel_nodes.insert(id, triskel_id);
         }
 
@@ -267,7 +245,6 @@ impl Cfg {
             let block = self.block(id)?.clone();
             blocks.push(LayoutBlock {
                 id,
-                label: block.label,
                 size: block.size,
                 top_left,
                 rank: 0,
@@ -309,8 +286,7 @@ impl Cfg {
     }
 }
 
-fn finite_f32(value: f32) -> Result<f64> {
-    let value = value as f64;
+fn finite_f32(value: f32) -> Result<f32> {
     if value.is_finite() {
         Ok(value)
     } else {
@@ -325,8 +301,8 @@ mod tests {
     #[test]
     fn validates_single_entry_and_exit() {
         let mut cfg = Cfg::new();
-        let entry = cfg.add_block("entry");
-        let exit = cfg.add_block("exit");
+        let entry = cfg.add_node(96.0, 44.0).unwrap();
+        let exit = cfg.add_node(96.0, 44.0).unwrap();
         cfg.add_edge(entry, exit, EdgeKind::Default).unwrap();
 
         let validation = cfg.validate().unwrap();
@@ -337,9 +313,9 @@ mod tests {
     #[test]
     fn rejects_multiple_entries() {
         let mut cfg = Cfg::new();
-        let entry_a = cfg.add_block("entry_a");
-        let entry_b = cfg.add_block("entry_b");
-        let exit = cfg.add_block("exit");
+        let entry_a = cfg.add_node(96.0, 44.0).unwrap();
+        let entry_b = cfg.add_node(96.0, 44.0).unwrap();
+        let exit = cfg.add_node(96.0, 44.0).unwrap();
         cfg.add_edge(entry_a, exit, EdgeKind::Default).unwrap();
         cfg.add_edge(entry_b, exit, EdgeKind::Default).unwrap();
 
@@ -352,8 +328,8 @@ mod tests {
     #[test]
     fn rejects_missing_exit() {
         let mut cfg = Cfg::new();
-        let a = cfg.add_block("a");
-        let b = cfg.add_block("b");
+        let a = cfg.add_node(96.0, 44.0).unwrap();
+        let b = cfg.add_node(96.0, 44.0).unwrap();
         cfg.add_edge(a, b, EdgeKind::Default).unwrap();
         cfg.add_edge(b, b, EdgeKind::Default).unwrap();
 
@@ -363,7 +339,7 @@ mod tests {
     #[test]
     fn rejects_invalid_edge_endpoint() {
         let mut cfg = Cfg::new();
-        let entry = cfg.add_block("entry");
+        let entry = cfg.add_node(96.0, 44.0).unwrap();
         let err = cfg
             .add_edge(entry, BlockId::from_raw(999), EdgeKind::Default)
             .unwrap_err();
@@ -375,7 +351,7 @@ mod tests {
     fn rejects_invalid_block_size() {
         let mut cfg = Cfg::new();
         assert!(matches!(
-            cfg.add_block_with_size("bad", 0.0, 10.0),
+            cfg.add_node(0.0, 10.0),
             Err(FlowblocksError::InvalidBlockSize { .. })
         ));
     }
@@ -383,10 +359,10 @@ mod tests {
     #[test]
     fn lays_out_branch_cfg_with_triskel() {
         let mut cfg = Cfg::new();
-        let entry = cfg.add_block("entry");
-        let branch = cfg.add_block("branch");
-        let true_exit = cfg.add_block("true_exit");
-        let false_exit = cfg.add_block_with_size("false_exit", 20.0, 10.0).unwrap();
+        let entry = cfg.add_node(96.0, 44.0).unwrap();
+        let branch = cfg.add_node(112.0, 48.0).unwrap();
+        let true_exit = cfg.add_node(96.0, 44.0).unwrap();
+        let false_exit = cfg.add_node(20.0, 10.0).unwrap();
 
         cfg.add_edge(entry, branch, EdgeKind::Default).unwrap();
         cfg.add_edge(branch, true_exit, EdgeKind::True).unwrap();
@@ -408,10 +384,10 @@ mod tests {
     #[test]
     fn lays_out_loop_cfg_with_triskel() {
         let mut cfg = Cfg::new();
-        let entry = cfg.add_block("entry");
-        let header = cfg.add_block("header");
-        let body = cfg.add_block("body");
-        let exit = cfg.add_block("exit");
+        let entry = cfg.add_node(96.0, 44.0).unwrap();
+        let header = cfg.add_node(112.0, 48.0).unwrap();
+        let body = cfg.add_node(128.0, 48.0).unwrap();
+        let exit = cfg.add_node(96.0, 44.0).unwrap();
 
         cfg.add_edge(entry, header, EdgeKind::Default).unwrap();
         cfg.add_edge(header, body, EdgeKind::True).unwrap();

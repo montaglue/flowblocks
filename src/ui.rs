@@ -1,17 +1,14 @@
 use crate::{CfgLayout, EdgeKind, LayoutBlock, LayoutEdge, Point};
 use egui::{
-    Align2, Color32, FontId, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
-    pos2, vec2,
+    Color32, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget, pos2, vec2,
 };
 
-const DEFAULT_NODE_SIZE: Vec2 = vec2(112.0, 48.0);
 const MIN_VIEW_SIZE: Vec2 = vec2(360.0, 280.0);
 
 #[derive(Clone, Debug)]
 pub struct CfgViewOptions {
     pub min_size: Vec2,
     pub padding: f32,
-    pub default_node_size: Vec2,
     pub background: Color32,
     pub block_fill: Color32,
     pub block_stroke: Stroke,
@@ -28,7 +25,6 @@ impl Default for CfgViewOptions {
         Self {
             min_size: MIN_VIEW_SIZE,
             padding: 28.0,
-            default_node_size: DEFAULT_NODE_SIZE,
             background: Color32::from_rgb(248, 249, 251),
             block_fill: Color32::WHITE,
             block_stroke: Stroke::new(1.0, Color32::from_rgb(96, 108, 128)),
@@ -82,18 +78,11 @@ impl Widget for CfgViewer<'_> {
         painter.rect_filled(rect, 6.0, self.options.background);
 
         if self.layout.blocks.is_empty() {
-            painter.text(
-                rect.center(),
-                Align2::CENTER_CENTER,
-                "empty cfg",
-                FontId::proportional(14.0),
-                self.options.text_color,
-            );
             return response;
         }
 
         let viewport = rect.shrink(self.options.padding);
-        let transform = LayoutTransform::new(self.layout, viewport, &self.options);
+        let transform = LayoutTransform::new(self.layout, viewport);
 
         for edge in &self.layout.edges {
             paint_edge(&painter, edge, &transform, &self.options);
@@ -114,8 +103,8 @@ struct LayoutTransform {
 }
 
 impl LayoutTransform {
-    fn new(layout: &CfgLayout, viewport: Rect, options: &CfgViewOptions) -> Self {
-        let bounds = LayoutBounds::from_layout(layout, options);
+    fn new(layout: &CfgLayout, viewport: Rect) -> Self {
+        let bounds = LayoutBounds::from_layout(layout);
         let bounds_size = vec2(bounds.width().max(1.0), bounds.height().max(1.0));
         let scale = (viewport.width() / bounds_size.x)
             .min(viewport.height() / bounds_size.y)
@@ -139,17 +128,13 @@ impl LayoutTransform {
         );
 
         pos2(
-            origin.x + (point.x as f32 - self.bounds.min_x) * self.scale,
-            origin.y + (point.y as f32 - self.bounds.min_y) * self.scale,
+            origin.x + (point.x - self.bounds.min_x) * self.scale,
+            origin.y + (point.y - self.bounds.min_y) * self.scale,
         )
     }
 
-    fn size(&self, block: &LayoutBlock, options: &CfgViewOptions) -> Vec2 {
-        let size = block
-            .size
-            .map(|size| vec2(size.width as f32, size.height as f32))
-            .unwrap_or(options.default_node_size);
-        size * self.scale
+    fn size(&self, block: &LayoutBlock) -> Vec2 {
+        vec2(block.size.width, block.size.height) * self.scale
     }
 }
 
@@ -162,7 +147,7 @@ struct LayoutBounds {
 }
 
 impl LayoutBounds {
-    fn from_layout(layout: &CfgLayout, options: &CfgViewOptions) -> Self {
+    fn from_layout(layout: &CfgLayout) -> Self {
         let mut bounds = Self {
             min_x: f32::INFINITY,
             min_y: f32::INFINITY,
@@ -171,19 +156,16 @@ impl LayoutBounds {
         };
 
         for block in &layout.blocks {
-            let size = block
-                .size
-                .map(|size| vec2(size.width as f32, size.height as f32))
-                .unwrap_or(options.default_node_size);
+            let size = vec2(block.size.width, block.size.height);
             bounds.include_rect(Rect::from_min_size(
-                pos2(block.top_left.x as f32, block.top_left.y as f32),
+                pos2(block.top_left.x, block.top_left.y),
                 size,
             ));
         }
 
         for edge in &layout.edges {
             for point in edge.polyline() {
-                bounds.include_point(pos2(point.x as f32, point.y as f32));
+                bounds.include_point(pos2(point.x, point.y));
             }
         }
 
@@ -269,7 +251,7 @@ fn paint_block(
     options: &CfgViewOptions,
 ) {
     let top_left = transform.point(block.top_left);
-    let rect = Rect::from_min_size(top_left, transform.size(block, options));
+    let rect = Rect::from_min_size(top_left, transform.size(block));
     let stroke = if block.id == layout.entry {
         options.entry_stroke
     } else if layout.exits.contains(&block.id) {
@@ -280,15 +262,6 @@ fn paint_block(
 
     painter.rect_filled(rect, 5.0, options.block_fill);
     painter.rect_stroke(rect, 5.0, stroke, StrokeKind::Middle);
-    if rect.width() >= 28.0 && rect.height() >= 14.0 {
-        painter.text(
-            rect.center(),
-            Align2::CENTER_CENTER,
-            &block.label,
-            FontId::proportional(13.0_f32.min(rect.height() * 0.32).max(8.0)),
-            options.text_color,
-        );
-    }
 }
 
 #[cfg(test)]

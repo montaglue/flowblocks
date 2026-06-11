@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 const EPSILON: f64 = 1.0e-9;
+const POINT_EPSILON: f32 = 1.0e-6;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct EdgeLengthSummary {
@@ -74,8 +75,8 @@ fn edge_orthogonality(layout: &CfgLayout) -> f64 {
     let mut scores = Vec::new();
     for edge in &layout.edges {
         for segment in edge.polyline().windows(2) {
-            let dx = (segment[1].x - segment[0].x).abs();
-            let dy = (segment[1].y - segment[0].y).abs();
+            let dx = f64::from((segment[1].x - segment[0].x).abs());
+            let dy = f64::from((segment[1].y - segment[0].y).abs());
             let length = dx.hypot(dy);
             if length > EPSILON {
                 scores.push(dx.max(dy) / length);
@@ -160,7 +161,7 @@ fn short_edges(lengths: &[f64]) -> EdgeLengthSummary {
 }
 
 fn graph_area(layout: &CfgLayout) -> f64 {
-    let area = layout.width * layout.height;
+    let area = f64::from(layout.width) * f64::from(layout.height);
     if area.is_finite() && area > 0.0 {
         area
     } else {
@@ -255,7 +256,7 @@ fn edge_direction_grouping(
                 forward: from.rank < to.rank,
                 min_rank: from.rank.min(to.rank),
                 max_rank: from.rank.max(to.rank),
-                lane_x: (edge.source.x + edge.target.x) / 2.0,
+                lane_x: f64::from(edge.source.x + edge.target.x) / 2.0,
             })
         })
         .collect::<Vec<_>>();
@@ -310,7 +311,10 @@ fn ideal_edge_length(
 ) -> f64 {
     let mut rank_y = HashMap::<usize, Vec<f64>>::new();
     for block in &layout.blocks {
-        rank_y.entry(block.rank).or_default().push(block.center().y);
+        rank_y
+            .entry(block.rank)
+            .or_default()
+            .push(f64::from(block.center().y));
     }
 
     let mut rank_centers: Vec<_> = rank_y
@@ -360,19 +364,19 @@ fn bounding_box_area(layout: &CfgLayout) -> f64 {
 
     let min_x = points
         .iter()
-        .map(|point| point.x)
+        .map(|point| f64::from(point.x))
         .fold(f64::INFINITY, f64::min);
     let max_x = points
         .iter()
-        .map(|point| point.x)
+        .map(|point| f64::from(point.x))
         .fold(f64::NEG_INFINITY, f64::max);
     let min_y = points
         .iter()
-        .map(|point| point.y)
+        .map(|point| f64::from(point.y))
         .fold(f64::INFINITY, f64::min);
     let max_y = points
         .iter()
-        .map(|point| point.y)
+        .map(|point| f64::from(point.y))
         .fold(f64::NEG_INFINITY, f64::max);
 
     (max_x - min_x).max(0.0) * (max_y - min_y).max(0.0)
@@ -383,7 +387,7 @@ fn shares_endpoint(a: Point, b: Point, c: Point, d: Point) -> bool {
 }
 
 fn same_point(a: Point, b: Point) -> bool {
-    (a.x - b.x).abs() <= EPSILON && (a.y - b.y).abs() <= EPSILON
+    (a.x - b.x).abs() <= POINT_EPSILON && (a.y - b.y).abs() <= POINT_EPSILON
 }
 
 fn segments_intersect(a: Point, b: Point, c: Point, d: Point) -> bool {
@@ -404,7 +408,7 @@ fn segments_intersect(a: Point, b: Point, c: Point, d: Point) -> bool {
 
 fn orientation(a: Point, b: Point, c: Point) -> i8 {
     let value = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
-    if value.abs() <= EPSILON {
+    if value.abs() <= POINT_EPSILON {
         0
     } else if value > 0.0 {
         1
@@ -414,14 +418,14 @@ fn orientation(a: Point, b: Point, c: Point) -> i8 {
 }
 
 fn on_segment(a: Point, b: Point, c: Point) -> bool {
-    b.x >= a.x.min(c.x) - EPSILON
-        && b.x <= a.x.max(c.x) + EPSILON
-        && b.y >= a.y.min(c.y) - EPSILON
-        && b.y <= a.y.max(c.y) + EPSILON
+    b.x >= a.x.min(c.x) - POINT_EPSILON
+        && b.x <= a.x.max(c.x) + POINT_EPSILON
+        && b.y >= a.y.min(c.y) - POINT_EPSILON
+        && b.y <= a.y.max(c.y) + POINT_EPSILON
 }
 
 fn collinear(a: Point, b: Point, c: Point) -> bool {
-    ((b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)).abs() <= EPSILON
+    ((b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)).abs() <= POINT_EPSILON
 }
 
 fn mean(values: &[f64]) -> f64 {
@@ -545,14 +549,13 @@ mod tests {
         .unwrap()
     }
 
-    fn block(id: usize, x: f64, y: f64) -> LayoutBlock {
+    fn block(id: usize, x: f32, y: f32) -> LayoutBlock {
         LayoutBlock {
             id: BlockId::from_raw(id),
-            label: id.to_string(),
-            size: Some(BlockSize {
+            size: BlockSize {
                 width: 10.0,
                 height: 10.0,
-            }),
+            },
             top_left: Point { x, y },
             rank: 0,
             column: 0,
@@ -563,9 +566,9 @@ mod tests {
         id: usize,
         from: usize,
         to: usize,
-        source: (f64, f64),
-        target: (f64, f64),
-        waypoints: Vec<(f64, f64)>,
+        source: (f32, f32),
+        target: (f32, f32),
+        waypoints: Vec<(f32, f32)>,
     ) -> LayoutEdge {
         LayoutEdge {
             id: ControlEdgeId::from_raw(id),
